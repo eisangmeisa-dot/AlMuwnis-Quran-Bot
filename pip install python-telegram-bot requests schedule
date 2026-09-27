@@ -1,0 +1,109 @@
+import logging
+from telegram import Bot
+from telegram.error import TelegramError
+import schedule
+import time
+from datetime import datetime
+import requests
+import threading
+
+# ضع Token بوتك هنا
+BOT_TOKEN = "YOUR_BOT_TOKEN_HERE"
+CHAT_ID = "YOUR_CHAT_ID_HERE"  # معرف القناة أو الجروب
+
+# إعداد السجلات
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+
+bot = Bot(token=BOT_TOKEN)
+
+# قائمة بآيات قرآنية
+QURAN_VERSES = [
+    {
+        "verse": "بسم الله الرحمن الرحيم",
+        "surah": "الفاتحة",
+        "number": "1:1",
+        "meaning": "أول آية في القرآن الكريم"
+    },
+    {
+        "verse": "الحمد لله رب العالمين",
+        "surah": "الفاتحة",
+        "number": "1:2",
+        "meaning": "حمد الله على نعمه"
+    },
+    {
+        "verse": "إن الله مع الصابرين",
+        "surah": "البقرة",
+        "number": "2:153",
+        "meaning": "الله ينصر الصابرين"
+    },
+    {
+        "verse": "ولا تيأسوا من روح الله",
+        "surah": "يوسف",
+        "number": "12:87",
+        "meaning": "عدم الاستسلام لليأس"
+    },
+    {
+        "verse": "قل يا أيها الناس إني رسول الله إليكم جميعا",
+        "surah": "الأعراف",
+        "number": "7:158",
+        "meaning": "رسالة النبي للجميع"
+    },
+]
+
+def send_daily_verse():
+    """إرسال آية يومية"""
+    try:
+        from datetime import datetime
+        day_number = datetime.now().day % len(QURAN_VERSES)
+        verse = QURAN_VERSES[day_number]
+        
+        message = f"""
+🕌 *آية اليوم*
+
+📖 *{verse['verse']}*
+
+📚 *السورة:* {verse['surah']}
+📍 *رقم الآية:* {verse['number']}
+✨ *المعنى:* {verse['meaning']}
+
+وَقُلِ اعْمَلُوا فَسَيَرَى اللَّهُ عَمَلَكُمْ ورَسُولُهُ والْمُؤْمِنُونَ
+        """
+        
+        bot.send_message(
+            chat_id=CHAT_ID,
+            text=message,
+            parse_mode='Markdown'
+        )
+        logger.info(f"✅ تم إرسال الآية: {verse['number']}")
+        
+    except TelegramError as e:
+        logger.error(f"❌ خطأ في الإرسال: {e}")
+    except Exception as e:
+        logger.error(f"❌ خطأ عام: {e}")
+
+def schedule_daily_message():
+    """جدولة الرسالة اليومية"""
+    # تحديد الوقت (الساعة 8 صباحا)
+    schedule.every().day.at("08:00").do(send_daily_verse)
+    
+    logger.info("⏰ تم جدولة الرسائل اليومية الساعة 8 صباحا")
+    
+    while True:
+        schedule.run_pending()
+        time.sleep(60)
+
+if __name__ == "__main__":
+    logger.info("🤖 البوت يعمل الآن...")
+    logger.info(f"⏰ سيتم إرسال آية كل يوم الساعة 8 صباحا")
+    
+    # تشغيل الجدولة في خيط منفصل
+    scheduler_thread = threading.Thread(target=schedule_daily_message, daemon=True)
+    scheduler_thread.start()
+    
+    # الاحتفاظ بالبرنامج يعمل
+    try:
+        while True:
+            time.sleep(1)
+    except KeyboardInterrupt:
+        logger.info("🛑 تم إيقاف البوت")
