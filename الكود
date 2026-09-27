@@ -1,0 +1,77 @@
+import requests
+import random
+import asyncio
+from telegram import Update
+from telegram.ext import ApplicationBuilder, ContextTypes
+from apscheduler.schedulers.asyncio import AsyncIOScheduler
+
+# -----------------------------
+# إعدادات البوت
+# -----------------------------
+BOT_TOKEN = "YOUR_BOT_TOKEN_HERE"
+CHAT_ID = "YOUR_CHAT_ID_HERE"  # مثال: -1001234567890
+
+# -----------------------------
+# جلب آية قرآنية عشوائية
+# -----------------------------
+def get_random_quran_ayah():
+    try:
+        ayah_id = random.randint(1, 6236)  # عدد آيات القرآن
+        url = f"https://api.alquran.cloud/v1/ayah/{ayah_id}/editions/ar.alafasy"
+        response = requests.get(url, timeout=10)
+        response.raise_for_status()
+
+        data = response.json()
+        ayah = data["data"][0]
+
+        text = ayah["text"]
+        surah_name = ayah["surah"]["name"]
+        surah_number = ayah["surah"]["number"]
+        ayah_number = ayah["numberInSurah"]
+
+        return f"""
+🕌 آية اليوم
+
+📖 {text}
+
+📚 السورة: {surah_name}
+🔢 رقم الآية: {ayah_number}
+🧾 رقم السورة: {surah_number}
+"""
+    except Exception as e:
+        return f"حدث خطأ أثناء جلب الآية: {str(e)}"
+
+# -----------------------------
+# إرسال الآية
+# -----------------------------
+async def send_daily_verse(context: ContextTypes.DEFAULT_TYPE):
+    msg = get_random_quran_ayah()
+    await context.bot.send_message(chat_id=CHAT_ID, text=msg)
+
+# -----------------------------
+# أمر يدوي
+# -----------------------------
+async def start_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    await update.message.reply_text(
+        "مرحبًا! البوت جاهز، وسيتم إرسال آية يومية تلقائيًا كل يوم في الساعة 08:00."
+    )
+
+# -----------------------------
+# تشغيل البوت
+# -----------------------------
+async def main():
+    app = ApplicationBuilder().token(BOT_TOKEN).build()
+
+    app.add_handler(
+        __import__("telegram.ext").ext.CommandHandler("start", start_command)
+    )
+
+    scheduler = AsyncIOScheduler(timezone="Asia/Riyadh")
+    scheduler.add_job(send_daily_verse, "cron", hour=8, minute=0, args=[app])
+    scheduler.start()
+
+    print("✅ البوت يعمل...")
+    await app.run_polling()
+
+if __name__ == "__main__":
+    asyncio.run(main())
