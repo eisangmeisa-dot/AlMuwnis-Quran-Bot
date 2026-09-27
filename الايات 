@@ -1,0 +1,23 @@
+import requests
+import random
+
+def get_random_ayah():
+    ayah_id = random.randint(1, 6236)
+    url = f"https://api.alquran.cloud/v1/ayah/{ayah_id}/editions/ar.alafasy"
+    r = requests.get(url, timeout=10)
+    data = r.json()["data"][0]
+
+    text = data["text"]
+    surah = data["surah"]["name"]
+    ayah_no = data["numberInSurah"]
+    surah_no = data["surah"]["number"]
+
+    return f"""
+🕌 آية اليوم
+
+📖 {text}
+
+📚 السورة: {surah}
+🔢 رقم الآية: {ayah_no}
+🧾 رقم السورة: {surah_no}
+"""
